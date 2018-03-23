@@ -17,6 +17,14 @@
 #include <pwd.h>
 #endif
 
+//#define HWSURFACE
+
+#if defined(HWSURFACE)
+Uint32 flags = SDL_HWSURFACE|SDL_DOUBLEBUF;
+#else
+Uint32 flags = SDL_SWSURFACE;
+#endif
+
 #define CAMSCROLL 15
 #define SCR_WIDTH 780
 #define SCR_HEIGHT 600
@@ -836,6 +844,16 @@ void apply_sprite(int x, int y, int sprx, int spry, int sprw, int sprh,
   SDL_BlitSurface(source, &clip, dest, &offset);
 }
 
+static void setVideoMode()
+{
+  Uint32 surfaceFlags = flags;
+
+  if (fullscreenmode) {
+    surfaceFlags |= SDL_FULLSCREEN;  
+  }
+
+  screen = SDL_SetVideoMode(SCR_WIDTH, SCR_HEIGHT, SCR_BPP, surfaceFlags);
+}
 
 int init() {
 
@@ -870,8 +888,9 @@ int init() {
   SDL_Surface* icon = SDL_LoadBMP(RESOURCE_PATH "images" DIRSEP "block.bmp");
   SDL_WM_SetIcon(icon, NULL);
 
-  screen = SDL_SetVideoMode(SCR_WIDTH, SCR_HEIGHT, SCR_BPP, SDL_FULLSCREEN|SDL_HWSURFACE|SDL_DOUBLEBUF);
   fullscreenmode = 1;
+  setVideoMode();
+
   if (screen == NULL) {
     printf("Error: couldn't initialize the screen\n");
     return 0;
@@ -2993,10 +3012,7 @@ void handle_key_down(SDLKey key) {
     if (ingame != 0 && ingame != 1) save_options();
   } else if ((mod & KMOD_ALT) && key == SDLK_RETURN) {
     fullscreenmode = !fullscreenmode;
-      Uint32 flags = fullscreenmode ? (SDL_FULLSCREEN | SDL_DOUBLEBUF) : 0;
-      flags |= SDL_HWSURFACE;
-
-      screen = SDL_SetVideoMode(SCR_WIDTH, SCR_HEIGHT, SCR_BPP, flags);
+    setVideoMode();
   }
 
   if (ingame == 4 || ingame == 5) {
@@ -4339,6 +4355,18 @@ void reincarnate_beret(int bdir, int bspeed) {
   }
 }
 
+static Uint32 frames = 0;
+
+static void printFps(const Uint32 now)
+{
+    static Uint32 last = 0;
+
+    if ((now - last) >= 1000) {
+         last = now;
+         printf("FPS: %d\n", frames);
+         frames = 0;
+    }
+}
 
 int main(int argc, char* argv[]) {
 
@@ -4349,19 +4377,12 @@ int main(int argc, char* argv[]) {
   game_init();
 
   Uint32 curTime, nextTime = SDL_GetTicks();
-  Uint32 frames;
-  Uint32 a = SDL_GetTicks(), b;
 
   // Enter main game loop
   while (!quit) {
     curTime = SDL_GetTicks();
 
-    b = curTime;
-    if ((b - a) >= 1000) {
-         a = b;
-         printf("FPS: %d\n", frames);
-         frames = 0;
-    }
+    printFps(curTime);
 
     if (curTime >= nextTime) {
       nextTime = SDL_GetTicks() + (1000 / FPS_LIMIT);
