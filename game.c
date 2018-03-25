@@ -19,12 +19,6 @@
 
 //#define HWSURFACE
 
-#if defined(HWSURFACE)
-Uint32 flags = SDL_HWSURFACE|SDL_DOUBLEBUF;
-#else
-Uint32 flags = SDL_SWSURFACE;
-#endif
-
 #define CAMSCROLL 15
 #define SCR_WIDTH 780
 #define SCR_HEIGHT 600
@@ -846,10 +840,20 @@ void apply_sprite(int x, int y, int sprx, int spry, int sprw, int sprh,
 
 static void setVideoMode()
 {
-  Uint32 surfaceFlags = flags;
+  Uint32 surfaceFlags = 0;
+
+#if defined(HWSURFACE)
+  surfaceFlags = SDL_HWSURFACE;
+#else
+  surfaceFlags = SDL_SWSURFACE;
+#endif
 
   if (fullscreenmode) {
-    surfaceFlags |= SDL_FULLSCREEN;  
+    surfaceFlags |= SDL_FULLSCREEN;
+
+#if defined(HWSURFACE)
+    surfaceFlags |= SDL_DOUBLEBUF; 
+#endif 
   }
 
   screen = SDL_SetVideoMode(SCR_WIDTH, SCR_HEIGHT, SCR_BPP, surfaceFlags);
